@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Digdir Spiderweb</title>
+  <style>
+    :root {
+      --page-top: #f6f1e7;
+      --page-bottom: #e6efe8;
+      --panel: rgba(255, 252, 245, 0.94);
+      --panel-border: rgba(121, 108, 89, 0.18);
+      --ink: #22313a;
+      --muted: #68747b;
+      --web: rgba(34, 49, 58, 0.14);
+      --edge: rgba(13, 92, 99, 0.28);
+      --edge-active: rgba(13, 92, 99, 0.82);
+      --edge-dim: rgba(13, 92, 99, 0.07);
+      --identity: #0f766e;
+      --register: #8a6f00;
+      --infrastructure: #355070;
+      --service: #c05621;
+      --glow: 0 26px 60px rgba(35, 43, 47, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(192, 86, 33, 0.12), transparent 26%),
+        linear-gradient(180deg, var(--page-top) 0%, var(--page-bottom) 100%);
+    }
+
+    main {
+      width: min(1240px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .frame {
+      position: relative;
+      border: 1px solid var(--panel-border);
+      border-radius: 30px;
+      background: var(--panel);
+      box-shadow: var(--glow);
+      overflow: hidden;
+    }
+
+    .canvas-wrap {
+      padding: 24px;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .legend {
+      position: absolute;
+      top: 22px;
+      right: 22px;
+      min-width: 176px;
+      padding: 14px 16px;
+      border: 1px solid rgba(121, 108, 89, 0.14);
+      border-radius: 18px;
+      background: rgba(255, 252, 245, 0.9);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 14px 34px rgba(35, 43, 47, 0.08);
+    }
+
+    .legend-title {
+      margin: 0 0 10px;
+      font-size: 0.8rem;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .legend-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.97rem;
+    }
+
+    .legend-marker {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+    }
+
+    .legend-marker circle,
+    .legend-marker rect,
+    .legend-marker polygon {
+      stroke: rgba(34, 49, 58, 0.16);
+      stroke-width: 1;
+    }
+
+    .hint {
+      padding: 0 24px 22px;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      font-size: 0.96rem;
+      color: var(--muted);
+    }
+
+    .ring,
+    .spoke {
+      pointer-events: none;
+    }
+
+    .ring {
+      fill: none;
+      stroke: var(--web);
+      stroke-width: 1.4;
+      stroke-dasharray: 6 8;
+    }
+
+    .spoke {
+      stroke: var(--web);
+      stroke-width: 1.2;
+    }
+
+    .edge {
+      fill: none;
+      stroke: var(--edge);
+      stroke-width: 3;
+      stroke-linecap: round;
+      transition: stroke 180ms ease, stroke-width 180ms ease;
+      pointer-events: none;
+    }
+
+    .edge.active {
+      stroke: var(--edge-active);
+      stroke-width: 4.6;
+    }
+
+    .edge.dim {
+      stroke: var(--edge-dim);
+    }
+
+    .node {
+      cursor: pointer;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .node-shape {
+      stroke: rgba(34, 49, 58, 0.22);
+      stroke-width: 2;
+      filter: drop-shadow(0 10px 18px rgba(35, 43, 47, 0.12));
+    }
+
+    .node-label {
+      font-size: 22px;
+      fill: var(--ink);
+      dominant-baseline: middle;
+      pointer-events: none;
+    }
+
+    .node.active .node-shape {
+      stroke: rgba(34, 49, 58, 0.44);
+      stroke-width: 3;
+    }
+
+    .node.related .node-shape {
+      stroke: rgba(34, 49, 58, 0.32);
+    }
+
+    .node.dim {
+      opacity: 0.38;
+    }
+
+    .node:not(.dim):hover .node-shape,
+    .node.active .node-shape {
+      transform-box: fill-box;
+      transform-origin: center;
+      transform: scale(1.06);
+    }
+
+    .center-mark {
+      fill: #0d5c63;
+      stroke: rgba(34, 49, 58, 0.18);
+      stroke-width: 2;
+    }
+
+    .center-label {
+      font-size: 24px;
+      fill: var(--ink);
+      text-anchor: middle;
+    }
+
+    .identity {
+      fill: var(--identity);
+    }
+
+    .register {
+      fill: var(--register);
+    }
+
+    .infrastructure {
+      fill: var(--infrastructure);
+    }
+
+    .service {
+      fill: var(--service);
+    }
+
+    @media (max-width: 920px) {
+      .canvas-wrap {
+        padding: 16px;
+      }
+
+      .legend {
+        position: static;
+        margin: 16px 16px 0;
+      }
+
+      .hint {
+        padding-top: 14px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      main {
+        padding: 14px;
+      }
+
+      .frame {
+        border-radius: 22px;
+      }
+
+      .node-label {
+        font-size: 17px;
+      }
+
+      .center-label {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="frame">
+      <aside class="legend" aria-label="Legend">
+        <p class="legend-title">Kategori</p>
+        <ul class="legend-list" id="legend-list"></ul>
+      </aside>
+      <div class="canvas-wrap">
+        <svg id="viz" viewBox="0 0 1200 1200" role="img" aria-label="Interactive Digdir spiderweb visualization"></svg>
+      </div>
+      <div class="hint">Click a node to highlight its connections. Click the background or the same node again to reset.</div>
+    </section>
+  </main>
+
+  <script>
+    const nodes = {
+      "ID-porten": { category: "identity" },
+      "MinID": { category: "identity" },
+      "Altinn": { category: "service" },
+      "KRR": { category: "register" },
+      "Digital postkasse": { category: "service" },
+      "eSignering": { category: "service" },
+      "eFormidling": { category: "infrastructure" },
+      "Maskinporten": { category: "infrastructure" },
+      "eInnsyn": { category: "service" },
+      "Offentlige tjenester": { category: "service" }
+    };
+
+    const edges = [
+      { source: "MinID", target: "ID-porten", label: "eID i" },
+      { source: "Altinn", target: "ID-porten", label: "innlogging via" },
+      { source: "eSignering", target: "ID-porten", label: "signering/innlogging via" },
+      { source: "Offentlige tjenester", target: "ID-porten", label: "innlogging via" },
+      { source: "Digital postkasse", target: "KRR", label: "bruker kontaktdata fra" },
+      { source: "Altinn", target: "KRR", label: "varsling/kontaktdata" },
+      { source: "eSignering", target: "KRR", label: "kontakt-/varslingsflyt" },
+      { source: "eFormidling", target: "Maskinporten", label: "maskin-til-maskin" },
+      { source: "Altinn", target: "Maskinporten", label: "integrasjon via" },
+      { source: "eInnsyn", target: "ID-porten", label: "innlogging via" },
+      { source: "Digital postkasse", target: "ID-porten", label: "tilgang via" }
+    ];
+
+    const categoryStyles = {
+      identity: { label: "Identity", colorClass: "identity", shape: "circle" },
+      register: { label: "Register", colorClass: "register", shape: "square" },
+      infrastructure: { label: "Infrastructure", colorClass: "infrastructure", shape: "diamond" },
+      service: { label: "Service", colorClass: "service", shape: "triangle" }
+    };
+
+    const svg = document.getElementById("viz");
+    const legendList = document.getElementById("legend-list");
+    const svgNs = "http://www.w3.org/2000/svg";
+    const center = { x: 600, y: 600 };
+    const radius = 360;
+    const nodeSize = 24;
+    const legendSize = nodeSize * 0.5;
+    const positions = computePositions(Object.keys(nodes));
+    let activeNode = null;
+
+    const layers = {
+      rings: createSvgElement("g"),
+      spokes: createSvgElement("g"),
+      edges: createSvgElement("g"),
+      center: createSvgElement("g"),
+      nodes: createSvgElement("g")
+    };
+
+    Object.values(layers).forEach((layer) => svg.appendChild(layer));
+
+    drawRings([0.28, 0.52, 0.76, 1]);
+    drawSpokes();
+    const edgeElements = drawEdges();
+    drawCenter();
+    const nodeElements = drawNodes();
+    drawLegend();
+    updateSelection(null);
+
+    svg.addEventListener("click", (event) => {
+      if (event.target === svg) {
+        updateSelection(null);
+      }
+    });
+
+    function computePositions(nodeNames) {
+      const map = {};
+      const total = nodeNames.length;
+
+      nodeNames.forEach((name, index) => {
+        const angle = ((90 - (360 * index) / total) * Math.PI) / 180;
+        map[name] = {
+          x: center.x + radius * Math.cos(angle),
+          y: center.y - radius * Math.sin(angle)
+        };
+      });
+
+      return map;
+    }
+
+    function createSvgElement(tag, attributes = {}) {
+      const element = document.createElementNS(svgNs, tag);
+      Object.entries(attributes).forEach(([key, value]) => {
+        element.setAttribute(key, value);
+      });
+      return element;
+    }
+
+    function drawRings(levels) {
+      levels.forEach((level) => {
+        const ring = createSvgElement("circle", {
+          cx: center.x,
+          cy: center.y,
+          r: radius * level,
+          class: "ring"
+        });
+        layers.rings.appendChild(ring);
+      });
+    }
+
+    function drawSpokes() {
+      Object.values(positions).forEach((point) => {
+        const spoke = createSvgElement("line", {
+          x1: center.x,
+          y1: center.y,
+          x2: point.x,
+          y2: point.y,
+          class: "spoke"
+        });
+        layers.spokes.appendChild(spoke);
+      });
+    }
+
+    function drawEdges() {
+      return edges.map((edge) => {
+        const from = positions[edge.source];
+        const to = positions[edge.target];
+        const line = createSvgElement("line", {
+          x1: from.x,
+          y1: from.y,
+          x2: to.x,
+          y2: to.y,
+          class: "edge"
+        });
+
+        line.dataset.source = edge.source;
+        line.dataset.target = edge.target;
+        line.dataset.label = edge.label;
+        layers.edges.appendChild(line);
+        return line;
+      });
+    }
+
+    function drawCenter() {
+      const star = createSvgElement("polygon", {
+        points: starPoints(center.x, center.y, 58, 28, 5),
+        class: "center-mark"
+      });
+      const label = createSvgElement("text", {
+        x: center.x,
+        y: center.y + 8,
+        class: "center-label"
+      });
+
+      label.textContent = "Digdir økosystem";
+      layers.center.appendChild(star);
+      layers.center.appendChild(label);
+    }
+
+    function drawNodes() {
+      return Object.entries(nodes).reduce((map, [name, meta]) => {
+        const point = positions[name];
+        const group = createSvgElement("g", {
+          class: `node ${meta.category}`,
+          tabindex: "0",
+          role: "button",
+          "aria-label": `${name}. Click to highlight connected lines.`
+        });
+
+        group.dataset.name = name;
+        group.appendChild(createShape(meta.category, point.x, point.y, nodeSize, "node-shape"));
+
+        const label = createSvgElement("text", {
+          x: point.x + (point.x >= center.x ? nodeSize + 12 : -(nodeSize + 12)),
+          y: point.y,
+          "text-anchor": point.x >= center.x ? "start" : "end",
+          class: "node-label"
+        });
+        label.textContent = name;
+        group.appendChild(label);
+
+        group.addEventListener("click", (event) => {
+          event.stopPropagation();
+          updateSelection(activeNode === name ? null : name);
+        });
+
+        group.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            updateSelection(activeNode === name ? null : name);
+          }
+        });
+
+        layers.nodes.appendChild(group);
+        map[name] = group;
+        return map;
+      }, {});
+    }
+
+    function drawLegend() {
+      Object.entries(categoryStyles).forEach(([key, style]) => {
+        const item = document.createElement("li");
+        item.className = "legend-item";
+
+        const marker = document.createElementNS(svgNs, "svg");
+        marker.setAttribute("viewBox", "0 0 24 24");
+        marker.setAttribute("class", "legend-marker");
+        marker.appendChild(createShape(key, 12, 12, legendSize, style.colorClass));
+
+        const text = document.createElement("span");
+        text.textContent = style.label;
+
+        item.appendChild(marker);
+        item.appendChild(text);
+        legendList.appendChild(item);
+      });
+    }
+
+    function createShape(category, x, y, size, className) {
+      const style = categoryStyles[category];
+      let shape;
+
+      if (style.shape === "circle") {
+        shape = createSvgElement("circle", {
+          cx: x,
+          cy: y,
+          r: size,
+          class: `${className} ${style.colorClass}`
+        });
+      } else if (style.shape === "square") {
+        shape = createSvgElement("rect", {
+          x: x - size,
+          y: y - size,
+          width: size * 2,
+          height: size * 2,
+          rx: 5,
+          class: `${className} ${style.colorClass}`
+        });
+      } else if (style.shape === "diamond") {
+        shape = createSvgElement("polygon", {
+          points: `${x},${y - size} ${x + size},${y} ${x},${y + size} ${x - size},${y}`,
+          class: `${className} ${style.colorClass}`
+        });
+      } else {
+        shape = createSvgElement("polygon", {
+          points: `${x},${y - size} ${x + size * 0.92},${y + size * 0.82} ${x - size * 0.92},${y + size * 0.82}`,
+          class: `${className} ${style.colorClass}`
+        });
+      }
+
+      return shape;
+    }
+
+    function starPoints(cx, cy, outerRadius, innerRadius, spikes) {
+      const step = Math.PI / spikes;
+      const points = [];
+      let rotation = -Math.PI / 2;
+
+      for (let i = 0; i < spikes; i += 1) {
+        points.push(`${cx + Math.cos(rotation) * outerRadius},${cy + Math.sin(rotation) * outerRadius}`);
+        rotation += step;
+        points.push(`${cx + Math.cos(rotation) * innerRadius},${cy + Math.sin(rotation) * innerRadius}`);
+        rotation += step;
+      }
+
+      return points.join(" ");
+    }
+
+    function updateSelection(name) {
+      activeNode = name;
+
+      edgeElements.forEach((edge) => {
+        const isConnected = name && (edge.dataset.source === name || edge.dataset.target === name);
+        edge.classList.toggle("active", Boolean(isConnected));
+        edge.classList.toggle("dim", Boolean(name && !isConnected));
+      });
+
+      Object.entries(nodeElements).forEach(([nodeName, group]) => {
+        const isRelated = name && edges.some((edge) =>
+          (edge.source === name && edge.target === nodeName) ||
+          (edge.target === name && edge.source === nodeName)
+        );
+
+        group.classList.toggle("active", nodeName === name);
+        group.classList.toggle("related", Boolean(isRelated));
+        group.classList.toggle("dim", Boolean(name && nodeName !== name && !isRelated));
+      });
+    }
+  </script>
+</body>
+</html>
