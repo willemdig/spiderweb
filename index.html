@@ -4,9 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Digdir økosystem</title>
-  <noscript>
-    <meta http-equiv="refresh" content="0" />
-  </noscript>
   <style>
     :root {
       --page-top: #f6f1e7;
@@ -430,81 +427,114 @@
     };
 
     const edges = [
-      { source: "MinID", target: "ID-porten", label: "eID i" },
-      { source: "Altinn", target: "ID-porten", label: "innlogging via" },
-      { source: "eSignering", target: "ID-porten", label: "signering/innlogging via" },
-      { source: "Offentlige tjenester", target: "ID-porten", label: "innlogging via" },
-      { source: "Digital postkasse", target: "KRR", label: "bruker kontaktdata fra" },
-      { source: "Altinn", target: "KRR", label: "varsling/kontaktdata" },
-      { source: "eSignering", target: "KRR", label: "kontakt-/varslingsflyt" },
-      { source: "eFormidling", target: "Maskinporten", label: "maskin-til-maskin" },
-      { source: "Altinn", target: "Maskinporten", label: "integrasjon via" },
-      { source: "eInnsyn", target: "ID-porten", label: "innlogging via" },
-      { source: "Digital postkasse", target: "ID-porten", label: "tilgang via" }
+      { source: "MinID", target: "ID-porten", label: "eID i", kind: "direct" },
+      { source: "Altinn", target: "ID-porten", label: "innlogging via", kind: "direct" },
+      { source: "eSignering", target: "ID-porten", label: "signering/innlogging via", kind: "direct" },
+      { source: "Offentlige tjenester", target: "ID-porten", label: "innlogging via", kind: "direct" },
+      { source: "Digital postkasse", target: "KRR", label: "bruker kontaktdata fra", kind: "direct" },
+      { source: "eSignering", target: "KRR", label: "kontakt- og varslingsflyt", kind: "direct" },
+      { source: "eFormidling", target: "Maskinporten", label: "maskin-til-maskin", kind: "direct" },
+      { source: "Altinn", target: "Maskinporten", label: "integrasjon via", kind: "direct" },
+      { source: "eInnsyn", target: "ID-porten", label: "innlogging via", kind: "direct" },
+      { source: "Digital postkasse", target: "ID-porten", label: "tilgang via", kind: "direct" },
+      { source: "Altinn", target: "KRR", label: "via Altinn autorisasjon og Altinn melding", kind: "proxy" },
+      { source: "Offentlige tjenester", target: "MinID", label: "relatert via ID-porten-flyt", kind: "proxy" },
+      { source: "Offentlige tjenester", target: "Altinn", label: "relatert via bruk av Altinn-komponenter", kind: "proxy" },
+      { source: "Offentlige tjenester", target: "KRR", label: "relatert via andre fellesløsninger", kind: "proxy" },
+      { source: "Offentlige tjenester", target: "Digital postkasse", label: "kan bruke digital postflyt", kind: "proxy" },
+      { source: "Offentlige tjenester", target: "eSignering", label: "kan bruke signeringsflyt", kind: "proxy" },
+      { source: "Offentlige tjenester", target: "eFormidling", label: "kan bruke formidling via", kind: "proxy" },
+      { source: "Offentlige tjenester", target: "Maskinporten", label: "kan bruke system-til-system via", kind: "proxy" },
+      { source: "Offentlige tjenester", target: "eInnsyn", label: "kan være koblet via publisering og innsyn", kind: "proxy" }
     ];
 
     const categoryStyles = {
-      identity: { label: "Identity", colorClass: "identity", shape: "circle" },
+      identity: { label: "Identitet", colorClass: "identity", shape: "circle" },
       register: { label: "Register", colorClass: "register", shape: "square" },
-      infrastructure: { label: "Infrastructure", colorClass: "infrastructure", shape: "diamond" },
-      service: { label: "Service", colorClass: "service", shape: "triangle" }
+      infrastructure: { label: "Infrastruktur", colorClass: "infrastructure", shape: "diamond" },
+      service: { label: "Tjeneste", colorClass: "service", shape: "triangle" }
     };
 
     const svg = document.getElementById("viz");
     const legendList = document.getElementById("legend-list");
+    const focusPanel = document.getElementById("focus-panel");
     const svgNs = "http://www.w3.org/2000/svg";
-    const center = { x: 600, y: 600 };
-    const radius = 360;
+
+    const center = { x: 600, y: 520 };
+    const defaultRadius = 350;
+    const directRadius = 235;
+    const proxyRadius = 345;
+    const outerRadius = 430;
     const nodeSize = 24;
     const legendSize = nodeSize * 0.5;
-    const positions = computePositions(Object.keys(nodes));
+
+    const nodeNames = Object.keys(nodes);
+    const defaultPositions = circularLayout(nodeNames, defaultRadius, 90, 360);
     let activeNode = null;
 
     const layers = {
       rings: createSvgElement("g"),
       spokes: createSvgElement("g"),
       edges: createSvgElement("g"),
-      center: createSvgElement("g"),
       nodes: createSvgElement("g")
     };
 
     Object.values(layers).forEach((layer) => svg.appendChild(layer));
 
     drawRings([0.28, 0.52, 0.76, 1]);
-    drawSpokes();
+    const spokeElements = drawSpokes();
     const edgeElements = drawEdges();
-    drawCenter();
     const nodeElements = drawNodes();
     drawLegend();
-    updateSelection(null);
+    applyState(null);
 
     svg.addEventListener("click", (event) => {
       if (event.target === svg) {
-        updateSelection(null);
+        applyState(null);
       }
     });
 
-    function computePositions(nodeNames) {
-      const map = {};
-      const total = nodeNames.length;
-
-      nodeNames.forEach((name, index) => {
-        const angle = ((90 - (360 * index) / total) * Math.PI) / 180;
-        map[name] = {
-          x: center.x + radius * Math.cos(angle),
-          y: center.y - radius * Math.sin(angle)
-        };
-      });
-
-      return map;
-    }
-
     function createSvgElement(tag, attributes = {}) {
       const element = document.createElementNS(svgNs, tag);
-      Object.entries(attributes).forEach(([key, value]) => {
-        element.setAttribute(key, value);
-      });
+      Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
       return element;
+    }
+
+    function circularLayout(names, radius, startAngleDeg, spanDeg) {
+      const layout = {};
+      const angles = distributedAngles(names.length, startAngleDeg, spanDeg);
+
+      names.forEach((name, index) => {
+        layout[name] = pointOnCircle(angles[index], radius);
+      });
+
+      return layout;
+    }
+
+    function distributedAngles(count, startAngleDeg, spanDeg) {
+      if (count === 0) {
+        return [];
+      }
+
+      if (count === 1) {
+        return [startAngleDeg];
+      }
+
+      if (spanDeg === 360) {
+        return Array.from({ length: count }, (_, index) => startAngleDeg - (360 * index) / count);
+      }
+
+      const first = startAngleDeg + spanDeg / 2;
+      const step = spanDeg / (count - 1);
+      return Array.from({ length: count }, (_, index) => first - step * index);
+    }
+
+    function pointOnCircle(angleDeg, radius) {
+      const angle = (angleDeg * Math.PI) / 180;
+      return {
+        x: center.x + radius * Math.cos(angle),
+        y: center.y - radius * Math.sin(angle)
+      };
     }
 
     function drawRings(levels) {
@@ -512,7 +542,7 @@
         const ring = createSvgElement("circle", {
           cx: center.x,
           cy: center.y,
-          r: radius * level,
+          r: defaultRadius * level,
           class: "ring"
         });
         layers.rings.appendChild(ring);
@@ -520,71 +550,48 @@
     }
 
     function drawSpokes() {
-      Object.values(positions).forEach((point) => {
+      return nodeNames.reduce((map, name) => {
         const spoke = createSvgElement("line", {
           x1: center.x,
           y1: center.y,
-          x2: point.x,
-          y2: point.y,
+          x2: defaultPositions[name].x,
+          y2: defaultPositions[name].y,
           class: "spoke"
         });
         layers.spokes.appendChild(spoke);
-      });
+        map[name] = spoke;
+        return map;
+      }, {});
     }
 
     function drawEdges() {
       return edges.map((edge) => {
-        const from = positions[edge.source];
-        const to = positions[edge.target];
         const line = createSvgElement("line", {
-          x1: from.x,
-          y1: from.y,
-          x2: to.x,
-          y2: to.y,
-          class: "edge"
+          class: `edge ${edge.kind}`
         });
-
         line.dataset.source = edge.source;
         line.dataset.target = edge.target;
         line.dataset.label = edge.label;
+        line.dataset.kind = edge.kind;
         layers.edges.appendChild(line);
         return line;
       });
     }
 
-    function drawCenter() {
-      const star = createSvgElement("polygon", {
-        points: starPoints(center.x, center.y, 58, 28, 5),
-        class: "center-mark"
-      });
-      const label = createSvgElement("text", {
-        x: center.x,
-        y: center.y + 8,
-        class: "center-label"
-      });
-
-      label.textContent = "Digdir økosystem";
-      layers.center.appendChild(star);
-      layers.center.appendChild(label);
-    }
-
     function drawNodes() {
-      return Object.entries(nodes).reduce((map, [name, meta]) => {
-        const point = positions[name];
+      return nodeNames.reduce((map, name) => {
+        const meta = nodes[name];
         const group = createSvgElement("g", {
           class: `node ${meta.category}`,
           tabindex: "0",
           role: "button",
-          "aria-label": `${name}. Click to highlight connected lines.`
+          "aria-label": `${name}. Klikk for å sette løsningen i sentrum.`
         });
 
         group.dataset.name = name;
-        group.appendChild(createShape(meta.category, point.x, point.y, nodeSize, "node-shape"));
+        group.appendChild(createShape(meta.category, 0, 0, nodeSize, "node-shape"));
 
         const label = createSvgElement("text", {
-          x: point.x + (point.x >= center.x ? nodeSize + 12 : -(nodeSize + 12)),
-          y: point.y,
-          "text-anchor": point.x >= center.x ? "start" : "end",
           class: "node-label"
         });
         label.textContent = name;
@@ -592,26 +599,26 @@
 
         group.addEventListener("click", (event) => {
           event.stopPropagation();
-          updateSelection(activeNode === name ? null : name);
+          applyState(activeNode === name ? null : name);
         });
 
         group.addEventListener("keydown", (event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            updateSelection(activeNode === name ? null : name);
+            applyState(activeNode === name ? null : name);
           }
         });
 
         layers.nodes.appendChild(group);
-        map[name] = group;
+        map[name] = { group, label };
         return map;
       }, {});
     }
 
     function drawLegend() {
       Object.entries(categoryStyles).forEach(([key, style]) => {
-        const item = document.createElement("li");
-        item.className = "legend-item";
+        const row = document.createElement("div");
+        row.className = "legend-item";
 
         const marker = document.createElementNS(svgNs, "svg");
         marker.setAttribute("viewBox", "0 0 24 24");
@@ -621,25 +628,26 @@
         const text = document.createElement("span");
         text.textContent = style.label;
 
-        item.appendChild(marker);
-        item.appendChild(text);
-        legendList.appendChild(item);
+        row.appendChild(marker);
+        row.appendChild(text);
+        legendList.appendChild(row);
       });
     }
 
     function createShape(category, x, y, size, className) {
       const style = categoryStyles[category];
-      let shape;
 
       if (style.shape === "circle") {
-        shape = createSvgElement("circle", {
+        return createSvgElement("circle", {
           cx: x,
           cy: y,
           r: size,
           class: `${className} ${style.colorClass}`
         });
-      } else if (style.shape === "square") {
-        shape = createSvgElement("rect", {
+      }
+
+      if (style.shape === "square") {
+        return createSvgElement("rect", {
           x: x - size,
           y: y - size,
           width: size * 2,
@@ -647,55 +655,240 @@
           rx: 5,
           class: `${className} ${style.colorClass}`
         });
-      } else if (style.shape === "diamond") {
-        shape = createSvgElement("polygon", {
+      }
+
+      if (style.shape === "diamond") {
+        return createSvgElement("polygon", {
           points: `${x},${y - size} ${x + size},${y} ${x},${y + size} ${x - size},${y}`,
           class: `${className} ${style.colorClass}`
         });
-      } else {
-        shape = createSvgElement("polygon", {
-          points: `${x},${y - size} ${x + size * 0.92},${y + size * 0.82} ${x - size * 0.92},${y + size * 0.82}`,
-          class: `${className} ${style.colorClass}`
-        });
       }
 
-      return shape;
+      return createSvgElement("polygon", {
+        points: `${x},${y - size} ${x + size * 0.92},${y + size * 0.82} ${x - size * 0.92},${y + size * 0.82}`,
+        class: `${className} ${style.colorClass}`
+      });
     }
 
-    function starPoints(cx, cy, outerRadius, innerRadius, spikes) {
-      const step = Math.PI / spikes;
-      const points = [];
-      let rotation = -Math.PI / 2;
+    function relatedEdges(name, kind = null) {
+      return edges.filter((edge) => {
+        const matchesNode = edge.source === name || edge.target === name;
+        return matchesNode && (kind ? edge.kind === kind : true);
+      });
+    }
 
-      for (let i = 0; i < spikes; i += 1) {
-        points.push(`${cx + Math.cos(rotation) * outerRadius},${cy + Math.sin(rotation) * outerRadius}`);
-        rotation += step;
-        points.push(`${cx + Math.cos(rotation) * innerRadius},${cy + Math.sin(rotation) * innerRadius}`);
-        rotation += step;
+    function otherNode(edge, name) {
+      return edge.source === name ? edge.target : edge.source;
+    }
+
+    function computeFocusLayout(selected) {
+      const directNodes = unique(relatedEdges(selected, "direct").map((edge) => otherNode(edge, selected)));
+      const proxyNodes = unique(
+        relatedEdges(selected, "proxy")
+          .map((edge) => otherNode(edge, selected))
+          .filter((name) => !directNodes.includes(name))
+      );
+      const unrelatedNodes = nodeNames.filter((name) => name !== selected && !directNodes.includes(name) && !proxyNodes.includes(name));
+
+      const layout = {};
+      layout[selected] = { x: center.x, y: center.y };
+
+      assignCircularPositions(layout, directNodes, directRadius, 90, 300);
+      assignCircularPositions(layout, proxyNodes, proxyRadius, 90, 320);
+      assignCircularPositions(layout, unrelatedNodes, outerRadius, 90, 330);
+
+      return { layout, directNodes, proxyNodes, unrelatedNodes };
+    }
+
+    function assignCircularPositions(target, names, radius, startAngleDeg, spanDeg) {
+      const angles = distributedAngles(names.length, startAngleDeg, spanDeg);
+      names.forEach((name, index) => {
+        target[name] = pointOnCircle(angles[index], radius);
+      });
+    }
+
+    function unique(values) {
+      return [...new Set(values)];
+    }
+
+    function applyState(selected) {
+      activeNode = selected;
+
+      const layoutInfo = selected
+        ? computeFocusLayout(selected)
+        : {
+            layout: defaultPositions,
+            directNodes: [],
+            proxyNodes: [],
+            unrelatedNodes: []
+          };
+
+      updateSpokes(layoutInfo, selected);
+      updateEdges(layoutInfo, selected);
+      updateNodes(layoutInfo, selected);
+      updateFocusPanel(selected);
+    }
+
+    function updateSpokes(layoutInfo, selected) {
+      nodeNames.forEach((name) => {
+        const spoke = spokeElements[name];
+        const point = layoutInfo.layout[name];
+
+        spoke.setAttribute("x1", center.x);
+        spoke.setAttribute("y1", center.y);
+        spoke.setAttribute("x2", point.x);
+        spoke.setAttribute("y2", point.y);
+
+        if (!selected) {
+          spoke.style.opacity = "1";
+          return;
+        }
+
+        const isVisible = layoutInfo.directNodes.includes(name) || layoutInfo.proxyNodes.includes(name);
+        spoke.style.opacity = isVisible ? "0.38" : "0";
+      });
+    }
+
+    function updateEdges(layoutInfo, selected) {
+      edgeElements.forEach((line, index) => {
+        const edge = edges[index];
+        const from = layoutInfo.layout[edge.source];
+        const to = layoutInfo.layout[edge.target];
+
+        line.setAttribute("x1", from.x);
+        line.setAttribute("y1", from.y);
+        line.setAttribute("x2", to.x);
+        line.setAttribute("y2", to.y);
+
+        line.classList.remove("active", "dim", "hidden");
+
+        if (!selected) {
+          if (edge.kind === "proxy") {
+            line.classList.add("hidden");
+          }
+          return;
+        }
+
+        const touchesSelected = edge.source === selected || edge.target === selected;
+        if (touchesSelected) {
+          line.classList.add("active");
+          return;
+        }
+
+        line.classList.add("dim");
+      });
+    }
+
+    function updateNodes(layoutInfo, selected) {
+      nodeNames.forEach((name) => {
+        const { group, label } = nodeElements[name];
+        const point = layoutInfo.layout[name];
+        const isActive = selected === name;
+        const isDirect = layoutInfo.directNodes.includes(name);
+        const isProxy = layoutInfo.proxyNodes.includes(name);
+        const isUnrelated = layoutInfo.unrelatedNodes.includes(name);
+
+        group.setAttribute("transform", `translate(${point.x} ${point.y})`);
+        group.classList.remove("active", "related", "dim", "hidden", "focus-center");
+
+        if (!selected) {
+          positionLabel(label, point, false);
+          label.style.fontSize = "22px";
+          label.style.fontWeight = "400";
+          return;
+        }
+
+        if (isActive) {
+          group.classList.add("active", "focus-center");
+          label.style.fontSize = "28px";
+          label.style.fontWeight = "700";
+          positionLabel(label, point, true);
+          return;
+        }
+
+        if (isDirect || isProxy) {
+          group.classList.add("related");
+          label.style.fontSize = isDirect ? "22px" : "20px";
+          label.style.fontWeight = isDirect ? "600" : "400";
+          positionLabel(label, point, false);
+          return;
+        }
+
+        if (isUnrelated) {
+          group.classList.add("dim");
+          label.style.fontSize = "17px";
+          label.style.fontWeight = "400";
+          positionLabel(label, point, false);
+        }
+      });
+    }
+
+    function positionLabel(label, point, centered) {
+      if (centered) {
+        label.setAttribute("x", 0);
+        label.setAttribute("y", 52);
+        label.setAttribute("text-anchor", "middle");
+        return;
       }
 
-      return points.join(" ");
+      const offset = point.x >= center.x ? nodeSize + 12 : -(nodeSize + 12);
+      label.setAttribute("x", offset);
+      label.setAttribute("y", 0);
+      label.setAttribute("text-anchor", point.x >= center.x ? "start" : "end");
     }
 
-    function updateSelection(name) {
-      activeNode = name;
+    function updateFocusPanel(selected) {
+      if (!selected) {
+        focusPanel.innerHTML = `
+          <div class="focus-head">
+            <h2 class="focus-title">Oversikt</h2>
+            <div class="focus-meta">Standardvisning</div>
+          </div>
+          <p class="focus-copy">
+            Standardvisningen viser de tydeligste direkte koblingene. Klikk på en løsning for å flytte den til sentrum
+            og se både direkte og indirekte relasjoner uten at proxy-forhold ser ut som helt direkte avhengigheter.
+          </p>
+        `;
+        return;
+      }
 
-      edgeElements.forEach((edge) => {
-        const isConnected = name && (edge.dataset.source === name || edge.dataset.target === name);
-        edge.classList.toggle("active", Boolean(isConnected));
-        edge.classList.toggle("dim", Boolean(name && !isConnected));
-      });
+      const direct = relatedEdges(selected, "direct");
+      const proxy = relatedEdges(selected, "proxy");
 
-      Object.entries(nodeElements).forEach(([nodeName, group]) => {
-        const isRelated = name && edges.some((edge) =>
-          (edge.source === name && edge.target === nodeName) ||
-          (edge.target === name && edge.source === nodeName)
-        );
+      focusPanel.innerHTML = `
+        <div class="focus-head">
+          <h2 class="focus-title">${selected} i sentrum</h2>
+          <div class="focus-meta">${direct.length} direkte · ${proxy.length} indirekte</div>
+        </div>
+        <p class="focus-copy">
+          Direkte relasjoner ligger nærmest sentrum. Indirekte eller proxy-baserte relasjoner ligger i neste ring
+          og tegnes som stiplede forbindelser.
+        </p>
+        <div class="focus-groups">
+          <section class="focus-group">
+            <h3>Direkte relasjoner</h3>
+            <ul class="focus-list">
+              ${renderFocusItems(direct, selected, "Ingen direkte relasjoner registrert i denne visningen.")}
+            </ul>
+          </section>
+          <section class="focus-group">
+            <h3>Indirekte / proxy</h3>
+            <ul class="focus-list">
+              ${renderFocusItems(proxy, selected, "Ingen indirekte relasjoner registrert i denne visningen.")}
+            </ul>
+          </section>
+        </div>
+      `;
+    }
 
-        group.classList.toggle("active", nodeName === name);
-        group.classList.toggle("related", Boolean(isRelated));
-        group.classList.toggle("dim", Boolean(name && nodeName !== name && !isRelated));
-      });
+    function renderFocusItems(relations, selected, emptyText) {
+      if (!relations.length) {
+        return `<li>${emptyText}</li>`;
+      }
+
+      return relations
+        .map((edge) => `<li><strong>${otherNode(edge, selected)}</strong>: ${edge.label}</li>`)
+        .join("");
     }
   </script>
 </body>
