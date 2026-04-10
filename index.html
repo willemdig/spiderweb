@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spiderweb-visualisering av Digdirs fellesløsninger</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --ring: #d7dce5;
+      --spoke: #e3e7ee;
+      --edge: #7c8aa5;
+      --center: #334155;
+      --identity: #2563eb;
+      --register: #059669;
+      --infrastructure: #7c3aed;
+      --service: #ea580c;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+      line-height: 1.1;
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 900px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .viz-wrap {
+      position: relative;
+      overflow: hidden;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: radial-gradient(circle at center, #ffffff 0%, #fafbfe 60%, #f3f5f9 100%);
+      border-radius: 16px;
+    }
+
+    .side h2 {
+      font-size: 1.05rem;
+      margin: 0 0 10px;
+    }
+
+    .side p, .side li {
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 0.95rem;
+    }
+
+    .legend {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+
+    .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .pill {
+      border: 1px solid #d9deea;
+      color: var(--muted);
+      background: #f9fafc;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.83rem;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 1050px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <h1>Spiderweb-visualisering av Digdirs fellesløsninger</h1>
+      <p>
+        Nettverksvisualisering av hvordan sentrale fellesløsninger henger sammen.
+        Figuren viser avhengigheter og samspill, ikke nødvendigvis full teknisk arkitektur.
+      </p>
+    </div>
+
+    <div class="layout">
+      <div class="card viz-wrap">
+        <svg id="chart" viewBox="0 0 1000 1000" aria-label="Spiderweb-visualisering"></svg>
+      </div>
+
+      <div class="side">
+        <div class="card">
+          <h2>Kategorier</h2>
+          <div class="legend" id="legend"></div>
+          <div class="pill-row">
+            <div class="pill">Spiderweb-look</div>
+            <div class="pill">Redigerbar datamodell</div>
+            <div class="pill">GitHub Pages-klar</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h2>Korleis du redigerer figuren</h2>
+          <p>Øvst i skriptet finn du <code>NODES</code> og <code>EDGES</code>. Legg til, fjern eller endre namn der for å oppdatere visualiseringa.</p>
+          <p>Kvar relasjon blir lesen som: <strong>frå node → til node</strong>, altså at den første brukar eller er avhengig av den andre.</p>
+          <div class="footer-note">Tips: Bruk denne som <code>index.html</code> i eit GitHub-repo og slå på GitHub Pages.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const NODES = [
+      { id: "ID-porten", category: "identity" },
+      { id: "MinID", category: "identity" },
+      { id: "Altinn", category: "service" },
+      { id: "KRR", category: "register" },
+      { id: "Digital postkasse", category: "service" },
+      { id: "eSignering", category: "service" },
+      { id: "eFormidling", category: "infrastructure" },
+      { id: "Maskinporten", category: "infrastructure" },
+      { id: "eInnsyn", category: "service" },
+      { id: "Offentlige tjenester", category: "service" }
+    ];
+
+    const EDGES = [
+      { source: "MinID", target: "ID-porten", label: "eID i" },
+      { source: "Altinn", target: "ID-porten", label: "innlogging via" },
+      { source: "eSignering", target: "ID-porten", label: "signering/innlogging via" },
+      { source: "Offentlige tjenester", target: "ID-porten", label: "innlogging via" },
+      { source: "Digital postkasse", target: "KRR", label: "bruker kontaktdata fra" },
+      { source: "Altinn", target: "KRR", label: "varsling/kontaktdata" },
+      { source: "eSignering", target: "KRR", label: "kontakt-/varslingsflyt" },
+      { source: "eFormidling", target: "Maskinporten", label: "maskin-til-maskin" },
+      { source: "Altinn", target: "Maskinporten", label: "integrasjon via" },
+      { source: "eInnsyn", target: "ID-porten", label: "innlogging via" },
+      { source: "Digital postkasse", target: "ID-porten", label: "tilgang via" }
+    ];
+
+    const CATEGORY_META = {
+      identity: { label: "Identitet", color: getCSS("--identity") },
+      register: { label: "Register", color: getCSS("--register") },
+      infrastructure: { label: "Infrastruktur", color: getCSS("--infrastructure") },
+      service: { label: "Tjeneste", color: getCSS("--service") }
+    };
+
+    function getCSS(name) {
+      return getCompu
