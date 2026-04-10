@@ -1,26 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Digdir Spiderweb</title>
+  <title>Digdir økosystem</title>
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=index_focus.html" />
+  </noscript>
+  <script>
+    window.location.replace("index_focus.html");
+  </script>
   <style>
     :root {
       --page-top: #f6f1e7;
-      --page-bottom: #e6efe8;
+      --page-bottom: #e3efe9;
       --panel: rgba(255, 252, 245, 0.94);
-      --panel-border: rgba(121, 108, 89, 0.18);
+      --panel-border: rgba(121, 108, 89, 0.16);
       --ink: #22313a;
-      --muted: #68747b;
-      --web: rgba(34, 49, 58, 0.14);
-      --edge: rgba(13, 92, 99, 0.28);
-      --edge-active: rgba(13, 92, 99, 0.82);
-      --edge-dim: rgba(13, 92, 99, 0.07);
+      --muted: #67747a;
+      --web: rgba(34, 49, 58, 0.12);
+      --edge-direct: rgba(13, 92, 99, 0.28);
+      --edge-direct-active: rgba(13, 92, 99, 0.86);
+      --edge-proxy: rgba(192, 86, 33, 0.2);
+      --edge-proxy-active: rgba(192, 86, 33, 0.78);
+      --edge-dim: rgba(34, 49, 58, 0.06);
       --identity: #0f766e;
       --register: #8a6f00;
       --infrastructure: #355070;
       --service: #c05621;
-      --glow: 0 26px 60px rgba(35, 43, 47, 0.14);
+      --glow: 0 28px 64px rgba(35, 43, 47, 0.14);
     }
 
     * {
@@ -33,68 +41,88 @@
       font-family: Georgia, "Times New Roman", serif;
       color: var(--ink);
       background:
-        radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(192, 86, 33, 0.12), transparent 26%),
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.14), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(192, 86, 33, 0.11), transparent 26%),
         linear-gradient(180deg, var(--page-top) 0%, var(--page-bottom) 100%);
     }
 
     main {
-      width: min(1240px, 100%);
+      width: min(1280px, 100%);
       margin: 0 auto;
-      padding: 24px;
+      padding: 22px;
     }
 
-    .frame {
-      position: relative;
+    .shell {
       border: 1px solid var(--panel-border);
-      border-radius: 30px;
+      border-radius: 32px;
       background: var(--panel);
       box-shadow: var(--glow);
       overflow: hidden;
     }
 
-    .canvas-wrap {
-      padding: 24px;
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+      gap: 20px;
+      padding: 24px 24px 18px;
+      border-bottom: 1px solid rgba(121, 108, 89, 0.12);
     }
 
-    svg {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .legend {
-      position: absolute;
-      top: 22px;
-      right: 22px;
-      min-width: 176px;
-      padding: 14px 16px;
-      border: 1px solid rgba(121, 108, 89, 0.14);
-      border-radius: 18px;
-      background: rgba(255, 252, 245, 0.9);
-      backdrop-filter: blur(8px);
-      box-shadow: 0 14px 34px rgba(35, 43, 47, 0.08);
-    }
-
-    .legend-title {
-      margin: 0 0 10px;
-      font-size: 0.8rem;
+    .eyebrow {
+      margin: 0 0 8px;
       font-family: "Segoe UI", Tahoma, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+      color: #0d5c63;
+    }
+
+    .intro {
+      margin: 12px 0 0;
+      max-width: 62ch;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .meta-panels {
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel {
+      padding: 14px 16px;
+      border: 1px solid rgba(121, 108, 89, 0.12);
+      border-radius: 18px;
+      background: rgba(255, 252, 245, 0.78);
+    }
+
+    .panel-title {
+      margin: 0 0 10px;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      font-size: 0.8rem;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--muted);
     }
 
-    .legend-list {
-      margin: 0;
-      padding: 0;
-      list-style: none;
+    .legend-grid {
       display: grid;
       gap: 8px;
     }
 
-    .legend-item {
+    .legend-item,
+    .relation-item {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -110,15 +138,103 @@
     .legend-marker circle,
     .legend-marker rect,
     .legend-marker polygon {
-      stroke: rgba(34, 49, 58, 0.16);
+      stroke: rgba(34, 49, 58, 0.18);
       stroke-width: 1;
     }
 
-    .hint {
-      padding: 0 24px 22px;
+    .relation-line {
+      width: 28px;
+      height: 0;
+      border-top: 3px solid var(--edge-direct-active);
+      flex: 0 0 auto;
+      border-radius: 999px;
+    }
+
+    .relation-line.proxy {
+      border-top-color: var(--edge-proxy-active);
+      border-top-style: dashed;
+    }
+
+    .focus-wrap {
+      padding: 0 24px 20px;
+    }
+
+    .focus-panel {
+      display: grid;
+      gap: 10px;
+      padding: 16px 18px;
+      border: 1px solid rgba(121, 108, 89, 0.12);
+      border-radius: 20px;
+      background: rgba(255, 252, 245, 0.8);
+    }
+
+    .focus-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px 16px;
+    }
+
+    .focus-title {
+      margin: 0;
+      font-size: 1.26rem;
+      color: #0d5c63;
+    }
+
+    .focus-meta {
       font-family: "Segoe UI", Tahoma, sans-serif;
-      font-size: 0.96rem;
+      font-size: 0.95rem;
       color: var(--muted);
+    }
+
+    .focus-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+      line-height: 1.55;
+    }
+
+    .focus-groups {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .focus-group {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(244, 240, 232, 0.7);
+    }
+
+    .focus-group h3 {
+      margin: 0 0 8px;
+      font-size: 0.96rem;
+      color: var(--ink);
+    }
+
+    .focus-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      font-size: 0.94rem;
+      color: var(--muted);
+    }
+
+    .focus-list strong {
+      color: var(--ink);
+    }
+
+    .canvas-wrap {
+      padding: 4px 18px 22px;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
     }
 
     .ring,
@@ -129,81 +245,97 @@
     .ring {
       fill: none;
       stroke: var(--web);
-      stroke-width: 1.4;
+      stroke-width: 1.3;
       stroke-dasharray: 6 8;
+      transition: opacity 180ms ease;
     }
 
     .spoke {
       stroke: var(--web);
-      stroke-width: 1.2;
+      stroke-width: 1.15;
+      transition: opacity 180ms ease;
     }
 
     .edge {
       fill: none;
-      stroke: var(--edge);
-      stroke-width: 3;
       stroke-linecap: round;
-      transition: stroke 180ms ease, stroke-width 180ms ease;
+      stroke-width: 3.2;
+      transition: opacity 180ms ease, stroke 180ms ease, stroke-width 180ms ease;
       pointer-events: none;
     }
 
-    .edge.active {
-      stroke: var(--edge-active);
-      stroke-width: 4.6;
+    .edge.direct {
+      stroke: var(--edge-direct);
+    }
+
+    .edge.proxy {
+      stroke: var(--edge-proxy);
+      stroke-dasharray: 10 8;
+    }
+
+    .edge.active.direct {
+      stroke: var(--edge-direct-active);
+      stroke-width: 4.9;
+      opacity: 1;
+    }
+
+    .edge.active.proxy {
+      stroke: var(--edge-proxy-active);
+      stroke-width: 4.4;
+      opacity: 1;
     }
 
     .edge.dim {
       stroke: var(--edge-dim);
+      opacity: 1;
+    }
+
+    .edge.hidden {
+      opacity: 0;
     }
 
     .node {
       cursor: pointer;
-      transition: opacity 180ms ease, transform 180ms ease;
+      transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
     }
 
     .node-shape {
       stroke: rgba(34, 49, 58, 0.22);
       stroke-width: 2;
       filter: drop-shadow(0 10px 18px rgba(35, 43, 47, 0.12));
+      transition: transform 220ms ease, stroke 180ms ease, opacity 180ms ease;
+      transform-box: fill-box;
+      transform-origin: center;
     }
 
     .node-label {
-      font-size: 22px;
       fill: var(--ink);
       dominant-baseline: middle;
       pointer-events: none;
+      transition: font-size 180ms ease, font-weight 180ms ease, opacity 180ms ease;
     }
 
-    .node.active .node-shape {
-      stroke: rgba(34, 49, 58, 0.44);
+    .node.active .node-shape,
+    .node.focus-center .node-shape {
+      stroke: rgba(34, 49, 58, 0.42);
       stroke-width: 3;
+      transform: scale(1.18);
     }
 
     .node.related .node-shape {
-      stroke: rgba(34, 49, 58, 0.32);
+      stroke: rgba(34, 49, 58, 0.3);
     }
 
     .node.dim {
-      opacity: 0.38;
+      opacity: 0.24;
     }
 
-    .node:not(.dim):hover .node-shape,
-    .node.active .node-shape {
-      transform-box: fill-box;
-      transform-origin: center;
-      transform: scale(1.06);
+    .node.hidden {
+      opacity: 0.1;
     }
 
-    .center-mark {
-      fill: #0d5c63;
-      stroke: rgba(34, 49, 58, 0.18);
-      stroke-width: 2;
-    }
-
-    .center-label {
-      font-size: 24px;
-      fill: var(--ink);
-      text-anchor: middle;
+    .node:not(.dim):not(.hidden):hover .node-shape {
+      transform: scale(1.08);
     }
 
     .identity {
@@ -222,51 +354,67 @@
       fill: var(--service);
     }
 
-    @media (max-width: 920px) {
-      .canvas-wrap {
-        padding: 16px;
-      }
-
-      .legend {
-        position: static;
-        margin: 16px 16px 0;
-      }
-
-      .hint {
-        padding-top: 14px;
+    @media (max-width: 980px) {
+      .topbar {
+        grid-template-columns: 1fr;
       }
     }
 
-    @media (max-width: 720px) {
+    @media (max-width: 760px) {
       main {
-        padding: 14px;
+        padding: 12px;
       }
 
-      .frame {
-        border-radius: 22px;
+      .shell {
+        border-radius: 24px;
       }
 
-      .node-label {
-        font-size: 17px;
+      .topbar,
+      .focus-wrap {
+        padding-left: 16px;
+        padding-right: 16px;
       }
 
-      .center-label {
-        font-size: 20px;
+      .focus-groups {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
   <main>
-    <section class="frame">
-      <aside class="legend" aria-label="Legend">
-        <p class="legend-title">Kategori</p>
-        <ul class="legend-list" id="legend-list"></ul>
-      </aside>
-      <div class="canvas-wrap">
-        <svg id="viz" viewBox="0 0 1200 1200" role="img" aria-label="Interactive Digdir spiderweb visualization"></svg>
+    <section class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Digdir</p>
+          <h1>økosystem</h1>
+          <p class="intro">
+            Klikk på en løsning for å sette den i sentrum. Heltrukne linjer viser direkte koblinger,
+            mens stiplede linjer viser indirekte eller proxy-baserte relasjoner.
+          </p>
+        </div>
+        <div class="meta-panels">
+          <section class="panel" aria-label="Kategori">
+            <p class="panel-title">Kategori</p>
+            <div class="legend-grid" id="legend-list"></div>
+          </section>
+          <section class="panel" aria-label="Relasjonstyper">
+            <p class="panel-title">Relasjonstype</p>
+            <div class="legend-grid">
+              <div class="relation-item"><span class="relation-line"></span><span>Direkte relasjon</span></div>
+              <div class="relation-item"><span class="relation-line proxy"></span><span>Indirekte / proxy</span></div>
+            </div>
+          </section>
+        </div>
+      </header>
+
+      <div class="focus-wrap">
+        <section class="focus-panel" id="focus-panel" aria-live="polite"></section>
       </div>
-      <div class="hint">Click a node to highlight its connections. Click the background or the same node again to reset.</div>
+
+      <div class="canvas-wrap">
+        <svg id="viz" viewBox="0 0 1200 1040" role="img" aria-label="Interaktiv spiderweb-visualisering av Digdirs fellesløsninger"></svg>
+      </div>
     </section>
   </main>
 
